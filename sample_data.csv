@@ -1,0 +1,6 @@
+order_id,order_date,product,cod_amount,courier_charge,status,settlement_status
+BB-00001,2026-09-01,Dhaka Street Sneaker,2500,100,Delivered,Settled
+BB-00002,2026-09-03,Bengal Leather Boot,3600,120,Cancelled,Unsettled
+BB-00003,2026-09-05,Classic Office Loafer,2800,90,Partial delivery,Unsettled
+BB-00004,2026-09-08,Everyday Sandal,1800,80,Delivered,Settled
+BB-00005,2026-09-10,Trail Runner,3200,120,Pending,Unsettled

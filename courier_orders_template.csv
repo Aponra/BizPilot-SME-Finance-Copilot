@@ -1,0 +1,2 @@
+order_id,order_date,product,cod_amount,courier_charge,status,settlement_status
+BB-00001,2026-10-01,Bengal Leather Boot,3600,100,Delivered,Settled
