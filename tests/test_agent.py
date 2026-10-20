@@ -37,6 +37,14 @@ def test_connection_reports_inactive_billing_without_provider_text(monkeypatch):
     assert result["ok"] is False and "billing is not active" in result["message"]
     assert "private provider text" not in result["message"]
 
+def test_connection_reports_rate_limit_without_provider_text(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-placeholder"); monkeypatch.setenv("OPENAI_MODEL", "gpt-5-mini")
+    error = type("RateLimitError", (Exception,), {"status_code": 429})
+    client = SimpleNamespace(responses=SimpleNamespace(create=lambda **kwargs: (_ for _ in ()).throw(error("private provider text"))))
+    result = check_ai_connection(client)
+    assert result["ok"] is False and "quota or rate limit" in result["message"]
+    assert "private provider text" not in result["message"]
+
 def test_tool_routing():
     assert route_question("Will I face a cash shortage?") == "forecast_cash_flow"
     assert route_question("Should I lower my price?") == "compare_pricing_scenarios"
@@ -61,3 +69,21 @@ def test_responses_api_tool_call_is_mocked(monkeypatch):
 def test_mock_call_redacts_phone():
     fake = SimpleNamespace(responses=FakeResponses()); ask_copilot("Customer 01712345678 performance", [], generate_sample_orders(5), DEFAULT_COSTS, client=fake)
     assert "01712345678" not in str(fake.responses.calls)
+
+def test_rate_limit_uses_local_finance_fallback(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-placeholder"); monkeypatch.setenv("OPENAI_MODEL", "gpt-5-mini")
+    error = type("RateLimitError", (Exception,), {"status_code": 429})
+    client = SimpleNamespace(responses=SimpleNamespace(create=lambda **kwargs: (_ for _ in ()).throw(error("do not expose"))))
+    logs = []
+    answer = ask_copilot("How is business going?", [], generate_sample_orders(10), DEFAULT_COSTS, client=client, logger=logs.append)
+    assert "deterministic finance tool locally" in answer
+    assert "analyze_business_finances" in answer
+    assert "do not expose" not in answer
+    assert logs[0]["final_status"] == "completed_locally_after_api_limit"
+
+def test_rate_limit_routes_assumption_heavy_questions_to_simulator(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-placeholder"); monkeypatch.setenv("OPENAI_MODEL", "gpt-5-mini")
+    error = type("RateLimitError", (Exception,), {"status_code": 429})
+    client = SimpleNamespace(responses=SimpleNamespace(create=lambda **kwargs: (_ for _ in ()).throw(error())))
+    answer = ask_copilot("Should I lower my price?", [], generate_sample_orders(10), DEFAULT_COSTS, client=client)
+    assert "Pricing and Marketing Simulator" in answer
